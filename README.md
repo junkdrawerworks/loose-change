@@ -56,6 +56,7 @@ To put it online with GitHub Pages: **Settings → Pages → Build and deploymen
 - `js/ai.js`: Doris, Big Alan and The Landlord, who simulate shots on a copy of the board and play the best one with a wobble.
 - `js/render.js`: draws the wood, the brass lines, the coins and the chalk on a canvas.
 - `js/sound.js`: the sounds, made with Web Audio.
+- `js/edge-guard.js`: a Back that comes mid-shove (Android's back gesture, set off by a finger near the screen's side) is taken for a slip, and the game stays.
 - `fonts/`: Fraunces and Figtree (SIL Open Font License), served from here so nothing loads from elsewhere.
 - `sw.js`: keeps a copy for playing offline. On a connection that isn't answering, a page opens from that copy after four seconds. `FILES` in it is a fingerprint of the files it keeps: change one and `npm test` says what to set it to, so a release never leaves the copy half old.
 - `manifest.webmanifest`, `icon.svg`, `icon-*.png`: for installing it to a home screen.

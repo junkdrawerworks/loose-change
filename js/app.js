@@ -3,6 +3,7 @@ import { newMarks, bedCounts, scoreTurn, winner, left } from './rules.js';
 import { REGULARS, chooseShot, wobble } from './ai.js';
 import { FACES, layout, resetCaches, drawBoard, drawCoin, drawChalk, drawWanted } from './render.js';
 import * as sound from './sound.js';
+import { guardEdges } from './edge-guard.js';
 
 const KEY = 'loose-change.v1';
 const COINS = 5;
@@ -411,6 +412,11 @@ const release = e => {
 };
 canvas.addEventListener('pointerup', release);
 canvas.addEventListener('pointercancel', release);
+// A finger near the screen's side can set off Android's back gesture (or Chrome's swipe to go back), which takes the
+// touch (pointercancel) and then goes Back, leaving the game. A Back that comes while a finger is on the board, or
+// within a second of the board's touch being taken, is a slip, and the game stays as it was. Loose Change has no
+// history of its own, so the guard keeps one extra entry for it; a deliberate Back still leaves in one press.
+guardEdges({ surfaces: [canvas] });
 
 // keyboard: arrows move and angle, space or enter held down builds the shove
 let keyPower = null;

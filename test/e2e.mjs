@@ -481,6 +481,47 @@ try {
   }
   step("on a phone the coin keeps clear of the screen's sides");
 
+  // A Back that comes while a finger is on the board, or just after the browser took a touch from it (as Android's
+  // back gesture does when a finger near the screen's side is taken for it), is taken for a slip: the game stays as it
+  // was. A second later, Back leaves in one press, as it always has.
+  {
+    const gctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: 'block' });
+    const p = watch(await gctx.newPage());
+    await p.goto(base + 'icon.svg');   // somewhere to go Back to
+    await p.goto(base);
+    await p.click('#startBtn');
+    await p.waitForFunction(() => { const g = window.looseChange.game; return g?.phase === 'aim' && g.turn === 0 && g.current; });
+    const box = await p.locator('#board').boundingBox();
+    const mid = { x: box.x + box.width / 2, y: box.y + box.height * 0.85 };
+    await p.tap('#board', { position: { x: box.width / 2, y: box.height / 2 } });
+    const game = () => p.evaluate(() => { const g = window.looseChange.game; return JSON.stringify([g.phase, g.turn, g.hand, g.marks, g.current.x, g.board.map(c => [c.x, c.y])]); });
+    const onBoard = async what => {
+      await p.waitForTimeout(300);
+      assert.equal(p.url(), base, what);
+      assert.deepEqual(await p.evaluate(() => [window.looseChange.game?.phase, document.getElementById('title').hidden]), ['aim', true], what);
+    };
+    // Back in the middle of sliding the coin.
+    await p.mouse.move(mid.x, mid.y); await p.mouse.down(); await p.mouse.move(mid.x + 40, mid.y - 2, { steps: 4 });
+    await p.goBack();
+    await onBoard('Back in the middle of a drag should stay on the board');
+    await p.mouse.up();
+    // The browser takes the touch, then a Back follows.
+    const was = await game();
+    const cdp = await gctx.newCDPSession(p);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [mid] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
+    await p.goBack();
+    await onBoard('Back just after the touch was taken should stay on the board');
+    assert.equal(await game(), was, 'the game should be as it was');
+    // A second on, Back leaves.
+    await p.tap('#board', { position: { x: box.width / 2, y: box.height / 2 } });
+    await p.waitForTimeout(1100);
+    await p.goBack();
+    await p.waitForURL(/icon\.svg$/, { timeout: 5000 }).catch(() => assert.fail('Back a while after a touch was taken should leave in one press'));
+    await gctx.close();
+    step('a Back mid-shove is taken for a slip; a deliberate one still leaves');
+  }
+
   // With JavaScript off, the page says what it needs it for instead of showing an empty board.
   {
     const nctx = await browser.newContext({ viewport: { width: 390, height: 844 }, javaScriptEnabled: false });
