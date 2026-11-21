@@ -150,6 +150,13 @@ try {
   // Fits a phone: nothing scrolls sideways.
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'the page scrolls sideways on a phone');
 
+  // A swipe sideways is nobody's, so it can't run on into Chrome's swipe to go Back or Forward: the page doesn't
+  // overscroll, and the board takes every touch.
+  const look = await page.evaluate(() => ['html', 'body', '#board'].map(s => { const c = getComputedStyle(document.querySelector(s)); return [c.overscrollBehaviorX, c.touchAction]; }));
+  assert.deepEqual(look.slice(0, 2).map(l => l[0]), ['none', 'none'], 'the page should not overscroll sideways');
+  assert.equal(look[2][1], 'none', 'the board should take every touch');
+  step('a swipe sideways does nothing');
+
   // Works offline once it has been opened (when there's a service worker to do it).
   const hasSw = await access(join(root, 'sw.js')).then(() => true, () => false);
   const controlled = hasSw && await page.waitForFunction(() => navigator.serviceWorker?.controller, null, { timeout: 10000 }).then(() => true, () => false);

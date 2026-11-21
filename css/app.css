@@ -18,11 +18,12 @@
 }
 
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); }
+/* No swipe sideways starts the browser's Back or Forward (Chrome's overscroll navigation): a shove that runs off the
+   board's side would otherwise leave the game. */
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); overscroll-behavior: none; }
 body {
   font-family: Figtree, system-ui, sans-serif;
   overflow: hidden;
-  overscroll-behavior: none;
   -webkit-user-select: none; user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
