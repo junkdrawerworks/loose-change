@@ -444,13 +444,17 @@ addEventListener('blur', () => { keyPower = null; hurry = null; if (game?.aim?.h
 
 // ---- drawing ---------------------------------------------------------------------------------------------------
 
+// On a phone's touch screen the board keeps 24 px from the screen's sides, clear of where Android's back gesture
+// starts: a finger sliding the coin to the board's edge, then pulling back from there, would otherwise be in it.
+const phone = matchMedia('(pointer: coarse) and (max-width: 560px)');
 function resize() {
   dpr = Math.min(3, window.devicePixelRatio || 1);
   const r = canvas.getBoundingClientRect();
   canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
-  view = layout(r.width, r.height);
+  view = layout(r.width, r.height, phone.matches ? 24 : 10);
 }
 addEventListener('resize', resize);
+phone.addEventListener?.('change', resize);
 
 let last = performance.now();
 function frame(now) {
@@ -764,4 +768,4 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
 }
 
 // for tests and screenshots
-window.looseChange = { get game() { return game; }, newGame, shoot, BOARD, lineY, MAX_DIST };
+window.looseChange = { get game() { return game; }, get view() { return view; }, newGame, shoot, BOARD, lineY, MAX_DIST };

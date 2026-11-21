@@ -454,6 +454,33 @@ try {
     step('in Pass the phone the colours take turns to go first');
   }
 
+  // On a phone's touch screen the coin, slid as far as it goes either way, keeps 24 px from the screen's sides, where
+  // Android's back gesture starts (the board's edge is as far as a finger sliding it reaches), at any phone width. With a
+  // mouse the board keeps its 10 px.
+  for (const [width, height, touch] of [[320, 568, true], [320, 700, true], [360, 740, true], [390, 844, true], [412, 915, true], [390, 844, false]]) {
+    const ectx = await browser.newContext({ viewport: { width, height }, hasTouch: touch, isMobile: touch, serviceWorkers: 'block' });
+    const p = watch(await ectx.newPage());
+    await p.goto(base);
+    await p.click('#startBtn');
+    await p.waitForFunction(() => window.looseChange.game?.phase === 'aim' && window.looseChange.game.current);
+    for (const way of [-1, 1]) {
+      const box = await p.locator('#board').boundingBox();
+      const x0 = way < 0 ? width - 10 : 10, y0 = box.y + box.height * 0.8;   // across the whole screen
+      await p.mouse.move(x0, y0); await p.mouse.down();
+      for (let i = 1; i <= 10; i++) await p.mouse.move(x0 + way * i * (width - 20) / 10, y0 - 2);
+      await p.mouse.up();
+      const gap = await p.evaluate(way => {
+        const { game, view, BOARD } = window.looseChange, left = document.getElementById('board').getBoundingClientRect().left;
+        const at = left + view.X(game.current.x + way * BOARD.r);
+        return way < 0 ? at : innerWidth - at;
+      }, way);
+      if (touch) assert.ok(gap >= 23.5, `the coin slid ${way < 0 ? 'left' : 'right'} comes ${gap.toFixed(1)} px from the screen's side at ${width}x${height}`);
+      else assert.equal(Math.round(gap), 10, "with a mouse the board should keep its 10 px from the window's sides");
+    }
+    await ectx.close();
+  }
+  step("on a phone the coin keeps clear of the screen's sides");
+
   // With JavaScript off, the page says what it needs it for instead of showing an empty board.
   {
     const nctx = await browser.newContext({ viewport: { width: 390, height: 844 }, javaScriptEnabled: false });

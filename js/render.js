@@ -2,9 +2,10 @@
 
 import { BOARD, lineY } from './physics.js';
 
-export function layout(cw, ch) {
+// side: the room left and right of the board (more on a phone's touch screen, see resize() in app.js).
+export function layout(cw, ch, side = 10) {
   const pad = 10, below = Math.max(96, ch * 0.14);
-  const s = Math.min((cw - pad * 2) / BOARD.w, (ch - pad - below) / BOARD.h);
+  const s = Math.min((cw - side * 2) / BOARD.w, (ch - pad - below) / BOARD.h);
   const bw = BOARD.w * s, bh = BOARD.h * s;
   const ox = (cw - bw) / 2, oy = Math.max(pad, (ch - below - bh) / 2);
   return {
