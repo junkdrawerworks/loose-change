@@ -483,7 +483,8 @@ try {
 
   // A Back that comes while a finger is on the board, or just after the browser took a touch from it (as Android's
   // back gesture does when a finger near the screen's side is taken for it), is taken for a slip: the game stays as it
-  // was. A second later, Back leaves in one press, as it always has.
+  // was. A second later, Back leaves in one press, as it always has: the guard's extra history entry goes on when a
+  // finger touches the board and comes off a second after it lifts.
   {
     const gctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, serviceWorkers: 'block' });
     const p = watch(await gctx.newPage());
@@ -493,7 +494,11 @@ try {
     await p.waitForFunction(() => { const g = window.looseChange.game; return g?.phase === 'aim' && g.turn === 0 && g.current; });
     const box = await p.locator('#board').boundingBox();
     const mid = { x: box.x + box.width / 2, y: box.y + box.height * 0.85 };
+    const guarded = () => p.evaluate(() => history.state?.__edgeGuard === true);
+    assert.equal(await guarded(), false, 'no extra history entry before the board is touched');
     await p.tap('#board', { position: { x: box.width / 2, y: box.height / 2 } });
+    await p.waitForTimeout(1300);
+    assert.equal(await guarded(), false, 'a second after a tap on the board, no extra entry');
     const game = () => p.evaluate(() => { const g = window.looseChange.game; return JSON.stringify([g.phase, g.turn, g.hand, g.marks, g.current.x, g.board.map(c => [c.x, c.y])]); });
     const onBoard = async what => {
       await p.waitForTimeout(300);
@@ -501,7 +506,9 @@ try {
       assert.deepEqual(await p.evaluate(() => [window.looseChange.game?.phase, document.getElementById('title').hidden]), ['aim', true], what);
     };
     // Back in the middle of sliding the coin.
-    await p.mouse.move(mid.x, mid.y); await p.mouse.down(); await p.mouse.move(mid.x + 40, mid.y - 2, { steps: 4 });
+    await p.mouse.move(mid.x, mid.y); await p.mouse.down();
+    assert.equal(await guarded(), true, 'a finger down on the board adds the extra entry');
+    await p.mouse.move(mid.x + 40, mid.y - 2, { steps: 4 });
     await p.goBack();
     await onBoard('Back in the middle of a drag should stay on the board');
     await p.mouse.up();
@@ -515,7 +522,8 @@ try {
     assert.equal(await game(), was, 'the game should be as it was');
     // A second on, Back leaves.
     await p.tap('#board', { position: { x: box.width / 2, y: box.height / 2 } });
-    await p.waitForTimeout(1100);
+    await p.waitForTimeout(1300);
+    assert.equal(await guarded(), false, 'with nothing on the board, there is no extra entry to press Back through');
     await p.goBack();
     await p.waitForURL(/icon\.svg$/, { timeout: 5000 }).catch(() => assert.fail('Back a while after a touch was taken should leave in one press'));
     await gctx.close();
